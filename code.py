@@ -8,21 +8,24 @@
 # result of weathering. random input x, y, radius data set 
 #
 # to run on my machine:
-# C:\Users\cesch\Anaconda2\python.exe C:\Users\cesch\Documents\2016-2017\MarsWeathering\Code\code.py
+# C:\Users\cesch\AppData\Local\Programs\Python\Python36-32\python.exe C:\Users\cesch\Documents\2016-2017\MarsBoulderWeathering\code.py
 # after running, can find image produced at https://plot.ly/~ceschae (most recent will be first result)
+
+# TODO List:
+#	- get rid of overlapping rocks
+#	- movie of plot with changes?
+#	- CFA plot
 
 import numpy as np
 # numpy may become important later, as may scipy
 
-# import for Set usage
-from sets import Set
-
 # import plotly for visualization
-import plotly.plotly as ply 
+import plotly
+import plotly.plotly as py 
 import plotly.graph_objs as go
 
 NUMBER = 1000; # a thousand rocks
-TIME = 10000000; # 10 million years
+TIME = 2000000000; # 2 billion years
 
 # defines basalt rock data container
 # future plan is to make Rock generic, 
@@ -30,6 +33,8 @@ TIME = 10000000; # 10 million years
 # define different weathering methods,
 # have different definitions of those weathering methods for each type of rock
 class BasaltRock: 
+	original_radii = []
+	new_radii = []
 
 	# constructs a new spherical basalt rock with the given diameter at
 	# the given location
@@ -38,10 +43,12 @@ class BasaltRock:
 	#	x_pos -    number to represent x geographic position in grid
 	#	y_pos -    number to represent y geographic position in grid
 	#	diameter - number to represent diameter of boulder in meters
-	def __init__(self, x_pos, y_pos, diameter):
+	def __init__(self, x_pos, y_pos, diameter, generation):
 		self.x = x_pos
 		self.y = y_pos
 		self.radius = diameter / 2 
+		self.new_radius = diameter / 2
+		self.gen = generation
 
 	# reduces radius of rock by 0.04 x 10^-9 m / year (Golombek & Bridges, 2000) 
 	# (minimum listed) for years number of years; simulates aeolian weathering 
@@ -50,7 +57,10 @@ class BasaltRock:
 	# params:
 	# 	years - number of years to weather rock
 	def aeolian_weather(self, years):
-		self.radius -= years * 0.04 * 10**(-9)
+		self.new_radius = self.radius - years * 0.04 * 10**(-9)
+
+	def not_overlapping(self):
+		return True
 
 # rocks stores all rocks in grid
 rocks = []
@@ -60,31 +70,41 @@ radii = np.random.random_sample(NUMBER)
 
 # adding many rocks to rocks
 for i in range(NUMBER):
-	rocks.append(BasaltRock(x[i],y[i],radii[i]))
+	rock = BasaltRock(x[i],y[i],radii[i],0)
+	if rock.not_overlapping() is True:
+		rocks.append(rock)
 
-new_radii = []
 # for testing weathering products
 for rock in rocks:
 	rock.aeolian_weather(TIME)
-	new_radii.append(rock.radius)
+	BasaltRock.original_radii.append(rock.radius)
+	BasaltRock.new_radii.append(rock.new_radius)
 
-trace1 = go.Scatter(
-	x=x,
-	y=y,
-	name='Original',
-	mode='markers',
-	marker = dict(
-		size = radii * 20
+orig_r = [r * 20 for r in BasaltRock.original_radii]
+new_r = [r * 20 for r in BasaltRock.new_radii]
+print(orig_r[0])
+print(new_r[0])
+data = [
+    go.Scatter(
+		x=x,
+		y=y,
+		name='Original',
+		mode='markers',
+		marker=dict(size = orig_r, color="rgb(0, 0, 0)")
+	),
+	go.Scatter(
+		x=x,
+		y=y,
+		name='Post-Weathering',
+		mode='markers',
+		marker=dict(size = new_r, color="rgb(255, 255, 255")
 	)
+]
+
+title = 'Time elapsed = ' + str(TIME)
+layout = go.Layout(
+	title = title
 )
-trace2 = go.Scatter(
-	x=x,
-	y=y,
-	name='Post-Weathering',
-	mode='markers',
-	marker = dict(
-		size = new_radii * 20
-	)
-)
-data = [trace1,trace2]
-ply.iplot(data)
+
+figure = go.Figure(data=data, layout=layout)
+plotly.offline.plot(figure)
