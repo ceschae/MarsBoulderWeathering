@@ -1,5 +1,5 @@
 # Mars boulder weathering simulation
-# version: 0.2
+# version: 0.3
 # author: Caitlin Schaefer (ceschae@gmail.com)
 # last updated: 26 April 2017
 #
@@ -9,7 +9,7 @@
 #
 # to run on my machine:
 # C:\Users\cesch\AppData\Local\Programs\Python\Python36-32\python.exe C:\Users\cesch\Documents\2016-2017\MarsBoulderWeathering\code.py
-# after running, can find image produced at https://plot.ly/~ceschae (most recent will be first result)
+# after running, can find image produced at in file as temp-plot.html
 
 # TODO List:
 #	- get rid of overlapping rocks
