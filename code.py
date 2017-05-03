@@ -1,5 +1,5 @@
 # Mars boulder weathering simulation
-# version: 0.3
+# version: 0.4
 # author: Caitlin Schaefer (ceschae@gmail.com)
 # last updated: 3 May 2017
 #
@@ -15,6 +15,11 @@
 #	- get rid of overlapping rocks
 #	- movie of plot with changes?
 #	- CFA plot
+#	- reformat title
+#	- size graphs
+#	- implement overlap search
+#	- consider implementing own random distributions
+
 
 import numpy as np
 # numpy may become important later, as may scipy
@@ -24,8 +29,11 @@ import plotly
 import plotly.plotly as py 
 import plotly.graph_objs as go
 
-NUMBER = 1000; # a thousand rocks
-TIME = 2000000000; # 2 billion years
+NUMBER = 1000 # a thousand rocks
+TIME = 2000000000 # 2 billion years
+WINDOW_SIZE = 100 # 100 m x 100 m
+MAX_RADIUS = 10 # 10 m
+MIN_RADIUS = 0.25 # 0.25 m
 
 # defines basalt rock data container
 # future plan is to make Rock generic, 
@@ -33,6 +41,7 @@ TIME = 2000000000; # 2 billion years
 # define different weathering methods,
 # have different definitions of those weathering methods for each type of rock
 class BasaltRock: 
+	rocks = []
 	original_radii = []
 	new_radii = []
 
@@ -59,20 +68,24 @@ class BasaltRock:
 	def aeolian_weather(self, years):
 		self.new_radius = self.radius - years * 0.04 * 10**(-9)
 
-	def not_overlapping(self):
+	def is_overlapping(new_rock):
 		return True
 
-# rocks stores all rocks in grid
-rocks = []
-x = np.random.randn(NUMBER)
-y = np.random.randn(NUMBER)
-radii = np.random.random_sample(NUMBER)
+x_small = np.random.random_sample(NUMBER) 
+x = [n * WINDOW_SIZE * 2 - WINDOW_SIZE for n in x_small] # x ranges from -WINDOW_SIZE to +WINDOW_SIZE
+y_small = np.random.random_sample(NUMBER) 
+y = [n * WINDOW_SIZE * 2 - WINDOW_SIZE for n in y_small] # y ranges from -WINDOW_SIZE to +WINDOW_SIZE
+radii_small = np.random.random_sample(NUMBER)
+radii = [n * MAX_RADIUS for n in radii_small]	# radii ranges from 0 to MAX_RADIUS
 
 # adding many rocks to rocks
 for i in range(NUMBER):
+	while radii_small[i] < MIN_RADIUS: # radii ranges from MIN_RADIUS to MAX_RADIUS
+		radii_small[i] = np.random.random_sample(1)[0] * MAX_RADIUS
+	radii.append(radii_small[i])
 	rock = BasaltRock(x[i],y[i],radii[i],0)
-	if rock.not_overlapping() is True:
-		rocks.append(rock)
+	if BasalTRock.is_overlapping(rock) is False:
+		BasaltRock.rocks.append(rock)
 
 # for testing weathering products
 for rock in rocks:
@@ -90,6 +103,7 @@ data = [
 		y=y,
 		name='Original',
 		mode='markers',
+		hoverinfo='size',
 		marker=dict(size = orig_r, color="rgb(0, 0, 0)")
 	),
 	go.Scatter(
@@ -97,6 +111,7 @@ data = [
 		y=y,
 		name='Post-Weathering',
 		mode='markers',
+		hoverinfo='size',
 		marker=dict(size = new_r, color="rgb(255, 255, 255")
 	)
 ]
