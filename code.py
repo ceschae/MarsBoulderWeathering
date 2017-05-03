@@ -1,7 +1,7 @@
 # Mars boulder weathering simulation
 # version: 0.3
 # author: Caitlin Schaefer (ceschae@gmail.com)
-# last updated: 26 April 2017
+# last updated: 3 May 2017
 #
 # weathers a NUMBER of basalt rocks for a given amount of TIME in days
 # using aeolian weathering model, outputs before/after rock graph as a 
