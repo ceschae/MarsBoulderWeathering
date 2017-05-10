@@ -11,7 +11,7 @@
 #
 # to run on my machine:
 # C:\Users\cesch\AppData\Local\Programs\Python\Python36-32\python.exe C:\Users\cesch\Documents\2016-2017\Research\MarsBoulderWeathering\code.py
-# after running, can find image produced at in file as temp-plot.html
+# after running, can find image produced at in file as CFA.html and boulder_distribution.html
 
 # TODO List:
 #	- movie of plot with changes?
