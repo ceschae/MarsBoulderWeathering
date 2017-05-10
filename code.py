@@ -1,7 +1,7 @@
 # Mars boulder weathering simulation
-# version: 0.5
+# version: 0.6
 # author: Caitlin Schaefer (ceschae@gmail.com)
-# last updated: 9 May 2017
+# last updated: 10 May 2017
 #
 # weathers a NUMBER of basalt rocks in random locations from -WINDOW_SIZE
 # to +WINDOW_SIZE in both x and y with random radii from MIN_RADIUS to 
