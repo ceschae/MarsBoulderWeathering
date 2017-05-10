@@ -21,7 +21,8 @@
 #	- consider implementing own random distributions
 
 import numpy as np
-# numpy may become important later, as may scipy
+import math as math
+# scipy may become important later
 
 # import plotly for visualization
 import plotly
@@ -58,6 +59,9 @@ class BasaltRock:
 		self.new_radius = diameter / 2
 		self.gen = generation
 
+	def __repr__(self):
+		return repr((self.x, self.y, self.radius))
+
 	# reduces radius of rock by 0.04 x 10^-9 m / year (Golombek & Bridges, 2000) 
 	# (minimum listed) for years number of years; simulates aeolian weathering 
 	# process
@@ -69,6 +73,7 @@ class BasaltRock:
 
 	def is_overlapping(new_rock):
 		for rock in BasaltRock.rocks:
+			# basic square overlap comparison
 			if ((rock.x < new_rock.x) and (rock.x + rock.radius > new_rock.x - new_rock.radius)) \
 					or ((rock.x > new_rock.x) and (new_rock.x + new_rock.radius > rock.x - rock.radius)) \
 					or ((rock.y < new_rock.y) and (rock.y + rock.radius > new_rock.y - new_rock.radius)) \
@@ -81,7 +86,7 @@ x = [n * WINDOW_SIZE * 2 - WINDOW_SIZE for n in x_small] # x ranges from -WINDOW
 y_small = np.random.random_sample(NUMBER) 
 y = [n * WINDOW_SIZE * 2 - WINDOW_SIZE for n in y_small] # y ranges from -WINDOW_SIZE to +WINDOW_SIZE
 radii_small = np.random.random_sample(NUMBER)
-radii = [n * MAX_RADIUS for n in radii_small]	# radii ranges from 0 to MAX_RADIUS
+radii = [n * (MAX_RADIUS - MIN_RADIUS) + MIN_RADIUS for n in radii_small]	# radii ranges from 0 to MAX_RADIUS
 
 # adding many rocks to rocks
 for i in range(NUMBER):
@@ -100,8 +105,42 @@ for rock in BasaltRock.rocks:
 
 orig_r = [r * 20 for r in BasaltRock.original_radii]
 new_r = [r * 20 for r in BasaltRock.new_radii]
-print(len(orig_r))
-print(len(new_r))
+
+total_area = WINDOW_SIZE * WINDOW_SIZE
+cfa_x = []
+cfa_y = []
+
+cfa_sum = 0
+sorted_rocks = sorted(BasaltRock.rocks, key=lambda rock: rock.radius, reverse=True)
+
+for rock in sorted_rocks:
+	diameter = rock.radius * 2
+	area = math.pi * rock.radius * rock.radius 
+	cfa_sum += area
+	cfa_x.append(diameter)
+	cfa_y.append(cfa_sum / total_area)
+
+# plotting CFA
+data = [
+	go.Scatter(
+		x=cfa_x,
+		y=cfa_y,
+		name='CFA',
+		mode='markers'
+	)
+]
+
+title = 'Cumulative Fractional Area (Random Boulders)'
+layout = go.Layout(
+	title = title,
+	xaxis=dict(title='Diameter (m)'), 
+	yaxis=dict(title='Cumulative Fractional Area')
+)
+
+figure = go.Figure(data=data, layout=layout)
+plotly.offline.plot(figure, filename = 'CFA.html')
+
+# plotting position of boulders
 data = [
     go.Scatter(
 		x=x,
@@ -123,8 +162,10 @@ data = [
 
 title = 'Time elapsed = ' + str(TIME)
 layout = go.Layout(
-	title = title
+	title = title,
+	xaxis=dict(title='x position (m)'), 
+	yaxis=dict(title='y position (m)')
 )
 
 figure = go.Figure(data=data, layout=layout)
-plotly.offline.plot(figure)
+plotly.offline.plot(figure, filename = 'boulder_position.html')
