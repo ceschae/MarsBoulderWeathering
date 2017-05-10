@@ -15,9 +15,7 @@
 
 # TODO List:
 #	- movie of plot with changes?
-#	- CFA plot
 #	- reformat title
-#	- size graphs
 #	- consider implementing own random distributions
 
 import numpy as np
