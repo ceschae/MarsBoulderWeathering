@@ -14,6 +14,14 @@
 # after running, can find image produced at in file as CFA.html and boulder_distribution.html
 
 # TODO List:
+#	- research: 
+#		+ terrestrial alien rock weathering
+#		+ not straightforward abrasion
+#	- density plot
+#	- save as PNG
+#	- make NUMBER that many rocks to have on plot
+#	- file import/export
+#	- uniform distribution 
 #	- movie of plot with changes?
 #	- reformat title
 #	- consider implementing own random distributions
@@ -40,6 +48,8 @@ MIN_RADIUS = 0.25 # 0.25 m
 # have different definitions of those weathering methods for each type of rock
 class BasaltRock: 
 	rocks = []
+	x = []
+	y = []
 	original_radii = []
 	new_radii = []
 
@@ -71,38 +81,36 @@ class BasaltRock:
 
 	def is_overlapping(new_rock):
 		for rock in BasaltRock.rocks:
-			# basic square overlap comparison
-			if ((rock.x < new_rock.x) and (rock.x + rock.radius > new_rock.x - new_rock.radius)) \
-					or ((rock.x > new_rock.x) and (new_rock.x + new_rock.radius > rock.x - rock.radius)) \
-					or ((rock.y < new_rock.y) and (rock.y + rock.radius > new_rock.y - new_rock.radius)) \
-					or ((rock.y > new_rock.y) and (new_rock.y + new_rock.radius > rock.y - rock.radius)):
+			# basic circle overlap comparison
+			r = math.pow(math.pow(new_rock.x - rock.x, 2) + math.pow(new_rock.y - rock.y, 2), 0.5)
+			if r - new_rock.radius - rock.radius < 0 is True:
 				return True
 		return False
 
-x_small = np.random.random_sample(NUMBER) 
-x = [n * WINDOW_SIZE * 2 - WINDOW_SIZE for n in x_small] # x ranges from -WINDOW_SIZE to +WINDOW_SIZE
-y_small = np.random.random_sample(NUMBER) 
-y = [n * WINDOW_SIZE * 2 - WINDOW_SIZE for n in y_small] # y ranges from -WINDOW_SIZE to +WINDOW_SIZE
-radii_small = np.random.random_sample(NUMBER)
-radii = [n * (MAX_RADIUS - MIN_RADIUS) + MIN_RADIUS for n in radii_small]	# radii ranges from 0 to MAX_RADIUS
-
-# adding many rocks to rocks
-for i in range(NUMBER):
-	while radii_small[i] < MIN_RADIUS: # radii ranges from MIN_RADIUS to MAX_RADIUS
-		radii_small[i] = np.random.random_sample(1)[0] * MAX_RADIUS
-	radii.append(radii_small[i])
-	rock = BasaltRock(x[i],y[i],radii[i],0)
+print("0% -> ", end='')
+counter = 0
+while len(BasaltRock.rocks) < NUMBER:
+	x = np.random.random_sample(1)[0] * WINDOW_SIZE * 2 - WINDOW_SIZE
+	y = np.random.random_sample(1)[0] * WINDOW_SIZE * 2 - WINDOW_SIZE
+	radius = np.random.random_sample(1)[0] * (MAX_RADIUS - MIN_RADIUS) + MIN_RADIUS
+	rock = BasaltRock(x, y, radius, 0)
 	if BasaltRock.is_overlapping(rock) is False:
 		BasaltRock.rocks.append(rock)
+	if len(BasaltRock.rocks) // 50 > counter:
+		print("*", end='')
+		counter += 1
+print(" -> 100%")
 
 # for testing weathering products
 for rock in BasaltRock.rocks:
 	rock.aeolian_weather(TIME)
+	BasaltRock.x.append(rock.x)
+	BasaltRock.y.append(rock.y)
 	BasaltRock.original_radii.append(rock.radius)
 	BasaltRock.new_radii.append(rock.new_radius)
 
-orig_r = [r * 20 for r in BasaltRock.original_radii]
-new_r = [r * 20 for r in BasaltRock.new_radii]
+orig_r = [r * 5 for r in BasaltRock.original_radii]
+new_r = [r * 5 for r in BasaltRock.new_radii]
 
 total_area = WINDOW_SIZE * WINDOW_SIZE
 cfa_x = []
@@ -141,16 +149,16 @@ plotly.offline.plot(figure, filename = 'CFA.html')
 # plotting position of boulders
 data = [
     go.Scatter(
-		x=x,
-		y=y,
+		x=BasaltRock.x,
+		y=BasaltRock.y,
 		name='Original',
 		mode='markers',
 		hoverinfo='size',
 		marker=dict(size = orig_r, color="rgb(0, 0, 0)")
 	),
 	go.Scatter(
-		x=x,
-		y=y,
+		x=BasaltRock.x,
+		y=BasaltRock.y,
 		name='Post-Weathering',
 		mode='markers',
 		hoverinfo='size',
