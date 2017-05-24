@@ -19,7 +19,6 @@
 #		+ not straightforward abrasion
 #	- density plot
 #	- save as PNG
-#	- make NUMBER that many rocks to have on plot
 #	- file import/export
 #	- uniform distribution 
 #	- movie of plot with changes?
@@ -34,6 +33,9 @@ import math as math
 import plotly
 import plotly.plotly as py 
 import plotly.graph_objs as go
+
+# csv for file processing
+import csv
 
 NUMBER = 1000 # a thousand rocks
 TIME = 15000000000 # 15 billion years
@@ -86,6 +88,27 @@ class BasaltRock:
 			if r - new_rock.radius - rock.radius < 0 is True:
 				return True
 		return False
+
+file_rocks = []
+file_radii = []
+file_weathered_radii = []
+file_lat = []
+file_lon = []
+with open('All_Lat_Diameter.csv') as csvfile:
+	spamreader = csv.reader(csvfile, delimiter=',')
+	for row in spamreader:
+		diameter = row[0]
+		latitude = row[2]
+		if (latitude != 'Lat'):
+			longitude = np.random.random_sample(1)[0] * WINDOW_SIZE * 2 - WINDOW_SIZE
+			rock = BasaltRock(float(latitude), longitude, float(diameter), 0)
+			file_rocks.append(rock)
+			file_radii.append(rock.radius)
+			file_lat.append(latitude)
+			file_lon.append(longitude)
+			rock.aeolian_weather(TIME)
+			file_weathered_radii.append(rock.radius)
+csvfile.close()
 
 print("0% -> ", end='')
 counter = 0
@@ -175,3 +198,33 @@ layout = go.Layout(
 
 figure = go.Figure(data=data, layout=layout)
 plotly.offline.plot(figure, filename = 'boulder_position.html')
+
+# plotting position of file boulders
+data = [
+    go.Scatter(
+		x=file_lat,
+		y=file_lon,
+		name='Original',
+		mode='markers',
+		hoverinfo='size',
+		marker=dict(size = file_radii, color="rgb(0, 0, 0)")
+	),
+	go.Scatter(
+		x=file_lat,
+		y=file_lon,
+		name='Post-Weathering',
+		mode='markers',
+		hoverinfo='size',
+		marker=dict(size = file_weathered_radii, color="rgb(255, 255, 255")
+	)
+]
+
+title = 'Time elapsed = ' + str(TIME)
+layout = go.Layout(
+	title = title,
+	xaxis=dict(title='x position (m)'), 
+	yaxis=dict(title='y position (m)')
+)
+
+figure = go.Figure(data=data, layout=layout)
+plotly.offline.plot(figure, filename = 'file_boulder_position.html')
