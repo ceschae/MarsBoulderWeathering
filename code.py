@@ -1,7 +1,7 @@
 # Mars boulder weathering simulation
-# version: 0.6
+# version: 0.9
 # author: Caitlin Schaefer (ceschae@gmail.com)
-# last updated: 10 May 2017
+# last updated: 24 May 2017
 #
 # weathers a NUMBER of basalt rocks in random locations from -WINDOW_SIZE
 # to +WINDOW_SIZE in both x and y with random radii from MIN_RADIUS to 
@@ -99,7 +99,7 @@ with open('All_Lat_Diameter.csv') as csvfile:
 	for row in spamreader:
 		diameter = row[0]
 		latitude = row[2]
-		if (latitude != 'Lat'):
+		if diameter != "Radius" and diameter != "" and latitude != "" and latitude != "Lat":
 			longitude = np.random.random_sample(1)[0] * WINDOW_SIZE * 2 - WINDOW_SIZE
 			rock = BasaltRock(float(latitude), longitude, float(diameter), 0)
 			file_rocks.append(rock)
