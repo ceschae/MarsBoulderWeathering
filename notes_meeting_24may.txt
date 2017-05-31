@@ -1,0 +1,41 @@
+boulder cracking 
+	- "3D" boulders
+	- variables:
+		+ crack year (cracks every ~10^6 years)
+		+ cracking chance (mean and stdev) (as a gaussian distribution)
+			-> if crack chance > 1 (shifting x_mean)
+			-> add to x_mean every year (by 1/crack year)
+	- when a boulder cracks, the clock "resets" on each of the resultant boulders
+	- where it's going to crack:
+		+ gaussian distribution 
+			-> x_mean_where it cracks (0.5)
+			-> sigma_where it cracks (0.1)
+		+ mass breaks unevenly along diameter
+		+ figuring out where to put the boulders after is tricky
+			-> sometimes it falls over and sometimes it doesn't
+			-> bigger piece stays where it is (with its center adjusted)
+			-> smaller piece falls over (with its center adjusted, and its diameter is the "crack length" along the old diameter axis)
+		+ ideally we'd store information about height?
+	- we'll have to deal with the "multiple cracks" thing at some point
+
+aeolian
+	- probably ok that it's linear erosion
+	- gaussian distribution
+		+ mean
+		+ stdev
+		+ every year picks something in that distribution as the "amount eroded"
+	- too small, turn into rubble pile
+		+ if boulder size is < detection limit (maybe 0.25 m), remove from model
+
+file output
+	- lat_orig
+	- lon_orig
+	- diam_orig
+	- lat_new
+	- lon_new
+	- diam_new
+	- generation
+
+long term
+	- variables get optimized and solved for based on before/after sample data
+	
