@@ -18,22 +18,13 @@
 #		+ terrestrial alien rock weathering
 #		+ not straightforward abrasion
 #	- density plot
-#	- save as PNG
 #	- uniform distribution 
 #	- movie of plot with changes?
 #	- reformat title
+#
 #boulder cracking 
 #	- "3D" boulders
-#	- variables:
-#		+ crack year (cracks every ~10^6 years)
-#		+ cracking chance (mean and stdev) (as a gaussian distribution)
-#			-> if crack chance > 1 (shifting x_mean)
-#			-> add to x_mean every year (by 1/crack year)
-#	- when a boulder cracks, the clock "resets" on each of the resultant boulders
 #	- where it's going to crack:
-#		+ gaussian distribution 
-#			-> x_mean_where it cracks (0.5)
-#			-> sigma_where it cracks (0.1)
 #		+ mass breaks unevenly along diameter
 #		+ figuring out where to put the boulders after is tricky
 #			-> sometimes it falls over and sometimes it doesn't
@@ -74,7 +65,6 @@ MIN_RADIUS = 0.25 # 0.25 m
 
 # boulder cracking variables
 CRACK_YEAR = 1000000 # a million years
-CRACK_MEAN = 0.01 # dummy value
 CRACK_STDEV = 0.001 # dummy value
 CRACK_X_MEAN = 0.5 # from 0-1 along diameter
 CRACK_X_STDEV = 0.1 # dummy value
@@ -119,6 +109,13 @@ class BasaltRock:
 	def aeolian_weather(self, years):
 		self.new_radius = self.radius - years * 0.04 * 10**(-9)
 
+	def crack(self):
+		crack_spot = self.radius * 2 * np.random.normal(CRACK_X_MEAN, CRACK_X_STDEV)
+		new_rock = BasaltRock(self.x, self.y, self.radius * 2 - crack_spot, self.generation + 1)
+		self.radius = crack_spot / 2
+		return new_rock
+
+
 	def is_overlapping(new_rock):
 		for rock in BasaltRock.rocks:
 			# basic circle overlap comparison
@@ -127,11 +124,14 @@ class BasaltRock:
 				return True
 		return False
 
+# arrays to help with graphing
 file_rocks = []
 file_radii = []
 file_weathered_radii = []
 file_lat = []
 file_lon = []
+
+# file input
 with open('Lat_Long_ESP_011779_2050.csv') as csvfile:
 	spamreader = csv.reader(csvfile, delimiter=',')
 	for row in spamreader:
@@ -146,10 +146,20 @@ with open('Lat_Long_ESP_011779_2050.csv') as csvfile:
 			file_radii.append(rock.radius)
 			file_lat.append(latitude)
 			file_lon.append(longitude)
-			rock.aeolian_weather(TIME)
+			# rock.aeolian_weather(TIME)
 			file_weathered_radii.append(rock.radius)
 csvfile.close()
 
+# weathering code
+for year in range(TIME):
+	for rock in file_rocks:
+		rock.time = rock.time + 1; # one year has passed
+		rock.aeolian_weather(1);
+		crack_sample = np.random.normal(rock.time / CRACK_YEAR, CRACK_STDEV)
+		if crack_sample >= 1:
+			new_rock.crack();
+
+# file output
 with open('011779_2050_weathered.csv', 'w', newline='') as csvfile:
     rockwriter = csv.writer(csvfile, delimiter=',')
     rockwriter.writerow(['lat_orig', 'lon_orig', 'diam_orig', 'lat_new', 'lon_new', 'diam_new', 'generation'])
@@ -157,6 +167,7 @@ with open('011779_2050_weathered.csv', 'w', newline='') as csvfile:
     	rockwriter.writerow([file_lat[i], file_lon[i], file_radii[i] * 2, \
     		file_lat[i], file_lon[i], file_weathered_radii[i] * 2, file_rocks[i].gen])
 
+# random distribution generation
 print("0% -> ", end='')
 counter = 0
 while len(BasaltRock.rocks) < NUMBER:
@@ -171,7 +182,7 @@ while len(BasaltRock.rocks) < NUMBER:
 		counter += 1
 print(" -> 100%")
 
-# for testing weathering products
+# aeolian weathering on random distribtuion 
 for rock in BasaltRock.rocks:
 	rock.aeolian_weather(TIME)
 	BasaltRock.x.append(rock.x)
@@ -179,16 +190,18 @@ for rock in BasaltRock.rocks:
 	BasaltRock.original_radii.append(rock.radius)
 	BasaltRock.new_radii.append(rock.new_radius)
 
+# scaling the size so the spots are visible
 orig_r = [r * 5 for r in BasaltRock.original_radii]
 new_r = [r * 5 for r in BasaltRock.new_radii]
 
+# structures for CFA plot
 total_area = WINDOW_SIZE * WINDOW_SIZE
 cfa_x = []
 cfa_y = []
 
+#generating CFA data
 cfa_sum = 0
 sorted_rocks = sorted(BasaltRock.rocks, key=lambda rock: rock.radius, reverse=True)
-
 for rock in sorted_rocks:
 	diameter = rock.radius * 2
 	area = math.pi * rock.radius * rock.radius 
@@ -214,9 +227,9 @@ layout = go.Layout(
 )
 
 figure = go.Figure(data=data, layout=layout)
-plotly.offline.plot(figure, filename = 'CFA.html')
+py.image.save_as(figure, filename='CFA.png')
 
-# plotting position of boulders
+# plotting position of randomly generated boulders
 data = [
     go.Scatter(
 		x=BasaltRock.x,
@@ -244,7 +257,7 @@ layout = go.Layout(
 )
 
 figure = go.Figure(data=data, layout=layout)
-plotly.offline.plot(figure, filename = 'boulder_position.html')
+py.image.save_as(figure, filename='random_boulder_position.png')
 
 # plotting position of file boulders
 data = [
@@ -274,4 +287,4 @@ layout = go.Layout(
 )
 
 figure = go.Figure(data=data, layout=layout)
-plotly.offline.plot(figure, filename = 'file_boulder_position.html')
+py.image.save_as(figure, filename='file_boulder_position.png')
