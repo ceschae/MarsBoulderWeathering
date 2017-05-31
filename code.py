@@ -51,15 +51,6 @@
 #	- too small, turn into rubble pile
 #		+ if boulder size is < detection limit (maybe 0.25 m), remove from model
 #
-#file output
-#	- lat_orig
-#	- lon_orig
-#	- diam_orig
-#	- lat_new
-#	- lon_new
-#	- diam_new
-#	- generation
-#
 #long term
 #	- variables get optimized and solved for based on before/after sample data
 	
