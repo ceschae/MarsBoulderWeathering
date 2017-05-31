@@ -11,7 +11,7 @@
 #
 # to run on my machine:
 # C:\Users\cesch\AppData\Local\Programs\Python\Python36-32\python.exe C:\Users\cesch\Documents\2016-2017\Research\MarsBoulderWeathering\code.py
-# after running, can find image produced at in file as CFA.html and boulder_distribution.html
+# after running, can find image produced at in file as CFA.html, boulder_distribution.html, and file_boulder_position.html
 
 # TODO List:
 #	- research: 
@@ -19,12 +19,50 @@
 #		+ not straightforward abrasion
 #	- density plot
 #	- save as PNG
-#	- file import/export
 #	- uniform distribution 
 #	- movie of plot with changes?
 #	- reformat title
-#	- consider implementing own random distributions
-
+#	- boulder cracking 
+#	- "3D" boulders
+#	- variables:
+#		+ crack year (cracks every ~10^6 years)
+#		+ cracking chance (mean and stdev) (as a gaussian distribution)
+#			-> if crack chance > 1 (shifting x_mean)
+#			-> add to x_mean every year (by 1/crack year)
+#	- when a boulder cracks, the clock "resets" on each of the resultant boulders
+#	- where it's going to crack:
+#		+ gaussian distribution 
+#			-> x_mean_where it cracks (0.5)
+#			-> sigma_where it cracks (0.1)
+#		+ mass breaks unevenly along diameter
+#		+ figuring out where to put the boulders after is tricky
+#			-> sometimes it falls over and sometimes it doesn't
+#			-> bigger piece stays where it is (with its center adjusted)
+#			-> smaller piece falls over (with its center adjusted, and its diameter is the "crack length" along the old diameter axis)
+#		+ ideally we'd store information about height?
+#	- we'll have to deal with the "multiple cracks" thing at some point
+#
+#aeolian
+#	- probably ok that it's linear erosion
+#	- gaussian distribution
+#		+ mean
+#		+ stdev
+#		+ every year picks something in that distribution as the "amount eroded"
+#	- too small, turn into rubble pile
+#		+ if boulder size is < detection limit (maybe 0.25 m), remove from model
+#
+#file output
+#	- lat_orig
+#	- lon_orig
+#	- diam_orig
+#	- lat_new
+#	- lon_new
+#	- diam_new
+#	- generation
+#
+#long term
+#	- variables get optimized and solved for based on before/after sample data
+	
 import numpy as np
 import math as math
 # scipy may become important later
@@ -94,13 +132,15 @@ file_radii = []
 file_weathered_radii = []
 file_lat = []
 file_lon = []
-with open('All_Lat_Diameter.csv') as csvfile:
+with open('Lat_Long_ESP_011779_2050.csv') as csvfile:
 	spamreader = csv.reader(csvfile, delimiter=',')
 	for row in spamreader:
 		diameter = row[0]
-		latitude = row[2]
-		if diameter != "Radius" and diameter != "" and latitude != "" and latitude != "Lat":
-			longitude = np.random.random_sample(1)[0] * WINDOW_SIZE * 2 - WINDOW_SIZE
+		latitude = row[1]
+		longitude = row[2]
+		if diameter != "Certain_Boulder_Line.SHAPE_Length" and diameter != "" \
+					and latitude != "" and latitude != "Certain_Boulder_Points.LAT" \
+					and longitude != "" and longitude != "Certain_Boulder_Points.LON":
 			rock = BasaltRock(float(latitude), longitude, float(diameter), 0)
 			file_rocks.append(rock)
 			file_radii.append(rock.radius)
@@ -109,6 +149,13 @@ with open('All_Lat_Diameter.csv') as csvfile:
 			rock.aeolian_weather(TIME)
 			file_weathered_radii.append(rock.radius)
 csvfile.close()
+
+with open('011779_2050_weathered.csv', 'w', newline='') as csvfile:
+    rockwriter = csv.writer(csvfile, delimiter=',')
+    rockwriter.writerow(['lat_orig', 'lon_orig', 'diam_orig', 'lat_new', 'lon_new', 'diam_new', 'generation'])
+    for i in range(len(file_rocks)):
+    	rockwriter.writerow([file_lat[i], file_lon[i], file_radii[i] * 2, \
+    		file_lat[i], file_lon[i], file_weathered_radii[i] * 2, file_rocks[i].gen])
 
 print("0% -> ", end='')
 counter = 0
