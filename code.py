@@ -22,7 +22,7 @@
 #	- uniform distribution 
 #	- movie of plot with changes?
 #	- reformat title
-#	- boulder cracking 
+#boulder cracking 
 #	- "3D" boulders
 #	- variables:
 #		+ crack year (cracks every ~10^6 years)
@@ -72,6 +72,13 @@ WINDOW_SIZE = 100 # 100 m x 100 m
 MAX_RADIUS = 10 # 10 m
 MIN_RADIUS = 0.25 # 0.25 m
 
+# boulder cracking variables
+CRACK_YEAR = 1000000 # a million years
+CRACK_MEAN = 0.01 # dummy value
+CRACK_STDEV = 0.001 # dummy value
+CRACK_X_MEAN = 0.5 # from 0-1 along diameter
+CRACK_X_STDEV = 0.1 # dummy value
+
 # defines basalt rock data container
 # future plan is to make Rock generic, 
 # store density as an attribute,
@@ -97,6 +104,8 @@ class BasaltRock:
 		self.radius = diameter / 2 
 		self.new_radius = diameter / 2
 		self.gen = generation
+		self.time = 0;
+		#self.height = ??
 
 	def __repr__(self):
 		return repr((self.x, self.y, self.radius))
