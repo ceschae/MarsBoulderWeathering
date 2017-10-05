@@ -1,7 +1,7 @@
 # Mars boulder weathering simulation
-# version: 0.9
+# version: 0.10
 # author: Caitlin Schaefer (ceschae@gmail.com)
-# last updated: 24 May 2017
+# last updated: 4 October 2017
 #
 # weathers a NUMBER of basalt rocks in random locations from -WINDOW_SIZE
 # to +WINDOW_SIZE in both x and y with random radii from MIN_RADIUS to 
@@ -30,6 +30,8 @@
 #			-> sometimes it falls over and sometimes it doesn't
 #			-> bigger piece stays where it is (with its center adjusted)
 #			-> smaller piece falls over (with its center adjusted, and its diameter is the "crack length" along the old diameter axis)
+#			-> "left" piece x, y: center must shift right
+#			-> "smaller" piece x, y: center will be (x + radius, y)
 #		+ ideally we'd store information about height?
 #	- we'll have to deal with the "multiple cracks" thing at some point
 #
@@ -47,27 +49,23 @@
 	
 import numpy as np
 import math as math
+import matplotlib.pyplot as plt
 # scipy may become important later
-
-# import plotly for visualization
-import plotly
-import plotly.plotly as py 
-import plotly.graph_objs as go
 
 # csv for file processing
 import csv
 
 NUMBER = 1000 # a thousand rocks
-TIME = 15000000000 # 15 billion years
-WINDOW_SIZE = 100 # 100 m x 100 m
+TIME = 1500000 # 1.5 million years
+WINDOW_SIZE = 100000 # 100000 m x 100000 m
 MAX_RADIUS = 10 # 10 m
 MIN_RADIUS = 0.25 # 0.25 m
 
 # boulder cracking variables
 CRACK_YEAR = 1000000 # a million years
-CRACK_STDEV = 0.001 # dummy value
+CRACK_STDEV = 0.001 # TODO: revisit
 CRACK_X_MEAN = 0.5 # from 0-1 along diameter
-CRACK_X_STDEV = 0.1 # dummy value
+CRACK_X_STDEV = 0.1 # TODO: revisit
 
 # defines basalt rock data container
 # future plan is to make Rock generic, 
@@ -111,8 +109,9 @@ class BasaltRock:
 
 	def crack(self):
 		crack_spot = self.radius * 2 * np.random.normal(CRACK_X_MEAN, CRACK_X_STDEV)
-		new_rock = BasaltRock(self.x, self.y, self.radius * 2 - crack_spot, self.generation + 1)
+		new_rock = BasaltRock(self.x, self.y, self.radius * 2 - crack_spot, self.gen + 1)
 		self.radius = crack_spot / 2
+		self.time = 0
 		return new_rock
 
 
@@ -131,6 +130,10 @@ file_weathered_radii = []
 file_lat = []
 file_lon = []
 
+max_lat = 0;
+min_lat = 0;
+max_lon = 0;
+min_lon = 0;
 # file input
 with open('Lat_Long_ESP_011779_2050.csv') as csvfile:
 	spamreader = csv.reader(csvfile, delimiter=',')
@@ -140,14 +143,22 @@ with open('Lat_Long_ESP_011779_2050.csv') as csvfile:
 		longitude = row[2]
 		if diameter != "Certain_Boulder_Line.SHAPE_Length" and diameter != "" \
 					and latitude != "" and latitude != "Certain_Boulder_Points.LAT" \
-					and longitude != "" and longitude != "Certain_Boulder_Points.LON":
-			rock = BasaltRock(float(latitude), longitude, float(diameter), 0)
+					and longitude != "" and longitude != "Certain_Boulder_Points.LON" \
+					and float(diameter) / 2 >= MIN_RADIUS:
+			rock = BasaltRock(float(latitude), float(longitude), float(diameter), 0)
 			file_rocks.append(rock)
 			file_radii.append(rock.radius)
-			file_lat.append(latitude)
-			file_lon.append(longitude)
+			file_lat.append(float(latitude))
+			file_lon.append(float(longitude))
+			if float(latitude) > max_lat:
+				max_lat = float(latitude)
+			elif float(latitude) < min_lat:
+				min_lat = float(latitude)
+			if float(longitude) > max_lon:
+				max_lon = float(longitude)
+			elif float(longitude) < min_lon:
+				min_lon = float(longitude)
 			# rock.aeolian_weather(TIME)
-			file_weathered_radii.append(rock.radius)
 csvfile.close()
 
 # weathering code
@@ -157,15 +168,24 @@ for year in range(TIME):
 		rock.aeolian_weather(1);
 		crack_sample = np.random.normal(rock.time / CRACK_YEAR, CRACK_STDEV)
 		if crack_sample >= 1:
-			new_rock.crack();
+			new_rock = rock.crack();
+			if rock.radius < MIN_RADIUS:
+				file_rocks.remove(rock)
+			else:
+				file_rocks.append(new_rock)
+				file_radii.append(new_rock.radius)
+				file_lat.append(new_rock.x)
+				file_lon.append(new_rock.y)
+
 
 # file output
 with open('011779_2050_weathered.csv', 'w', newline='') as csvfile:
     rockwriter = csv.writer(csvfile, delimiter=',')
     rockwriter.writerow(['lat_orig', 'lon_orig', 'diam_orig', 'lat_new', 'lon_new', 'diam_new', 'generation'])
     for i in range(len(file_rocks)):
-    	rockwriter.writerow([file_lat[i], file_lon[i], file_radii[i] * 2, \
-    		file_lat[i], file_lon[i], file_weathered_radii[i] * 2, file_rocks[i].gen])
+    	file_weathered_radii.append(file_rocks[i].radius)
+    	rockwriter.writerow([str(file_lat[i]), str(file_lon[i]), str(file_radii[i] * 2), \
+    		str(file_lat[i]), str(file_lon[i]), str(file_weathered_radii[i] * 2), str(file_rocks[i].gen)])
 
 # random distribution generation
 print("0% -> ", end='')
@@ -190,10 +210,6 @@ for rock in BasaltRock.rocks:
 	BasaltRock.original_radii.append(rock.radius)
 	BasaltRock.new_radii.append(rock.new_radius)
 
-# scaling the size so the spots are visible
-orig_r = [r * 5 for r in BasaltRock.original_radii]
-new_r = [r * 5 for r in BasaltRock.new_radii]
-
 # structures for CFA plot
 total_area = WINDOW_SIZE * WINDOW_SIZE
 cfa_x = []
@@ -209,82 +225,37 @@ for rock in sorted_rocks:
 	cfa_x.append(diameter)
 	cfa_y.append(cfa_sum / total_area)
 
-# plotting CFA
-data = [
-	go.Scatter(
-		x=cfa_x,
-		y=cfa_y,
-		name='CFA',
-		mode='markers'
-	)
-]
-
-title = 'Cumulative Fractional Area (Random Boulders)'
-layout = go.Layout(
-	title = title,
-	xaxis=dict(title='Diameter (m)'), 
-	yaxis=dict(title='Cumulative Fractional Area')
-)
-
-figure = go.Figure(data=data, layout=layout)
-py.image.save_as(figure, filename='CFA.png')
+# plotting CFA of randomly generated boulders
+plt.plot(cfa_x, cfa_y, 'o')
+plt.title('cumulative fractional area (cfa)')
+plt.xlabel('diameter of boulder (m)')
+plt.ylabel('cumulative fractional area (m^2 / m^2)')
+plt.show()
 
 # plotting position of randomly generated boulders
-data = [
-    go.Scatter(
-		x=BasaltRock.x,
-		y=BasaltRock.y,
-		name='Original',
-		mode='markers',
-		hoverinfo='size',
-		marker=dict(size = orig_r, color="rgb(0, 0, 0)")
-	),
-	go.Scatter(
-		x=BasaltRock.x,
-		y=BasaltRock.y,
-		name='Post-Weathering',
-		mode='markers',
-		hoverinfo='size',
-		marker=dict(size = new_r, color="rgb(255, 255, 255")
-	)
-]
+plt.plot(BasaltRock.x, BasaltRock.y, 'o')
+plt.title('boulder position (randomly generated)')
+plt.xlabel('x position')
+plt.ylabel('y position')
+plt.show()
 
-title = 'Time elapsed = ' + str(TIME)
-layout = go.Layout(
-	title = title,
-	xaxis=dict(title='x position (m)'), 
-	yaxis=dict(title='y position (m)')
-)
-
-figure = go.Figure(data=data, layout=layout)
-py.image.save_as(figure, filename='random_boulder_position.png')
+#generating CFA data
+file_cfa_sum = 0
+file_sorted_rocks = sorted(file_rocks, key=lambda rock: rock.radius, reverse=True)
+# structures for CFA plot
+file_total_area = (max_lat - min_lat) * 59000 * (max_lon - min_lon) * 59000 # degress to m
+file_cfa_x = []
+file_cfa_y = []
+for rock in file_sorted_rocks:
+	diameter = rock.radius * 2
+	area = math.pi * rock.radius * rock.radius 
+	file_cfa_sum += area
+	file_cfa_x.append(diameter)
+	file_cfa_y.append(cfa_sum / total_area)
 
 # plotting position of file boulders
-data = [
-    go.Scatter(
-		x=file_lat,
-		y=file_lon,
-		name='Original',
-		mode='markers',
-		hoverinfo='size',
-		marker=dict(size = file_radii, color="rgb(0, 0, 0)")
-	),
-	go.Scatter(
-		x=file_lat,
-		y=file_lon,
-		name='Post-Weathering',
-		mode='markers',
-		hoverinfo='size',
-		marker=dict(size = file_weathered_radii, color="rgb(255, 255, 255")
-	)
-]
-
-title = 'Time elapsed = ' + str(TIME)
-layout = go.Layout(
-	title = title,
-	xaxis=dict(title='x position (m)'), 
-	yaxis=dict(title='y position (m)')
-)
-
-figure = go.Figure(data=data, layout=layout)
-py.image.save_as(figure, filename='file_boulder_position.png')
+plt.plot(file_cfa_x, file_cfa_y, 'o')
+plt.title('cumulative fractional area (cfa)')
+plt.xlabel('diameter of boulder (m)')
+plt.ylabel('cumulative fractional area (m^2 / m^2)')
+plt.show()
