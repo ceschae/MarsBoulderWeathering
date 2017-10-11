@@ -1,7 +1,7 @@
 # Mars boulder weathering simulation
 # version: 0.10
 # author: Caitlin Schaefer (ceschae@gmail.com)
-# last updated: 4 October 2017
+# last updated: 11 October 2017
 #
 # weathers a NUMBER of basalt rocks in random locations from -WINDOW_SIZE
 # to +WINDOW_SIZE in both x and y with random radii from MIN_RADIUS to 
@@ -21,6 +21,9 @@
 #	- uniform distribution 
 #	- movie of plot with changes?
 #	- reformat title
+#	- pyplot markersize (s=?)
+# 	- label graphs more descriptively
+#	- command line args? 
 #
 #boulder cracking 
 #	- "3D" boulders
@@ -47,6 +50,7 @@
 #long term
 #	- variables get optimized and solved for based on before/after sample data
 	
+import subprocess
 import numpy as np
 import math as math
 import matplotlib.pyplot as plt
@@ -55,11 +59,16 @@ import matplotlib.pyplot as plt
 # csv for file processing
 import csv
 
+# import subprocess.call("", shell=True)
+
 NUMBER = 1000 # a thousand rocks
-TIME = 1500000 # 1.5 million years
+TIME = 150000 # 150 thousand years 
 WINDOW_SIZE = 100000 # 100000 m x 100000 m
 MAX_RADIUS = 10 # 10 m
 MIN_RADIUS = 0.25 # 0.25 m
+
+TEMP_HEIGHT = 1 # 1 m
+TIPPING_POINT = 0.25 # quarter of the rock
 
 # boulder cracking variables
 CRACK_YEAR = 1000000 # a million years
@@ -86,14 +95,14 @@ class BasaltRock:
 	#	x_pos -    number to represent x geographic position in grid
 	#	y_pos -    number to represent y geographic position in grid
 	#	diameter - number to represent diameter of boulder in meters
-	def __init__(self, x_pos, y_pos, diameter, generation):
+	def __init__(self, x_pos, y_pos, diameter, height, generation):
 		self.x = x_pos
 		self.y = y_pos
 		self.radius = diameter / 2 
 		self.new_radius = diameter / 2
 		self.gen = generation
-		self.time = 0;
-		#self.height = ??
+		self.height = height
+		self.time = 0
 
 	def __repr__(self):
 		return repr((self.x, self.y, self.radius))
@@ -109,8 +118,23 @@ class BasaltRock:
 
 	def crack(self):
 		crack_spot = self.radius * 2 * np.random.normal(CRACK_X_MEAN, CRACK_X_STDEV)
-		new_rock = BasaltRock(self.x, self.y, self.radius * 2 - crack_spot, self.gen + 1)
-		self.radius = crack_spot / 2
+		# crack angle? for now assuming along longest axis (and projecting
+		# longest axis along x axis)
+		if crack_spot < self.radius * TIPPING_POINT:
+			# new rock is the one that tipped over
+			new_rock = BasaltRock(self.x - self.radius + crack_spot - (self.height / 2), self.y, TEMP_HEIGHT, crack_spot, self.gen + 1)
+			# new_rock.x is probably correct? want to double-check
+			self.x = self.x + (crack_spot / 2)
+			self.radius = self.radius - (crack_spot / 2)
+		elif crack_spot > self.radius * (1 - TIPPING_POINT):
+			# new_rock is the one that tipped over
+			new_rock = BasaltRock(self.x + self.radius - crack_spot + (self.height / 2), self.y, TEMP_HEIGHT, crack_spot, self.gen + 1)
+			self.x = self.x - self.radius + (crack_spot / 2)
+			self.radius = self.radius - (crack_spot / 2)
+		else:
+			new_rock = BasaltRock(self.x + (crack_spot / 2), self.y, self.radius * 2 - crack_spot, TEMP_HEIGHT, self.gen + 1)
+			self.x = self.x - self.radius + (crack_spot / 2)
+			self.radius = crack_spot / 2
 		self.time = 0
 		return new_rock
 
@@ -145,7 +169,7 @@ with open('Lat_Long_ESP_011779_2050.csv') as csvfile:
 					and latitude != "" and latitude != "Certain_Boulder_Points.LAT" \
 					and longitude != "" and longitude != "Certain_Boulder_Points.LON" \
 					and float(diameter) / 2 >= MIN_RADIUS:
-			rock = BasaltRock(float(latitude), float(longitude), float(diameter), 0)
+			rock = BasaltRock(float(latitude), float(longitude), float(diameter), TEMP_HEIGHT, 0)
 			file_rocks.append(rock)
 			file_radii.append(rock.radius)
 			file_lat.append(float(latitude))
@@ -194,7 +218,7 @@ while len(BasaltRock.rocks) < NUMBER:
 	x = np.random.random_sample(1)[0] * WINDOW_SIZE * 2 - WINDOW_SIZE
 	y = np.random.random_sample(1)[0] * WINDOW_SIZE * 2 - WINDOW_SIZE
 	radius = np.random.random_sample(1)[0] * (MAX_RADIUS - MIN_RADIUS) + MIN_RADIUS
-	rock = BasaltRock(x, y, radius, 0)
+	rock = BasaltRock(x, y, radius, TEMP_HEIGHT, 0)
 	if BasaltRock.is_overlapping(rock) is False:
 		BasaltRock.rocks.append(rock)
 	if len(BasaltRock.rocks) // 50 > counter:
