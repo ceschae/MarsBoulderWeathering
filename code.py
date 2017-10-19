@@ -20,13 +20,9 @@
 #	- density plot
 #	- uniform distribution 
 #	- movie of plot with changes?
-#	- reformat title
-#	- pyplot markersize (s=?)
-# 	- label graphs more descriptively
 #	- command line args? 
 #
 #boulder cracking 
-#	- "3D" boulders
 #	- where it's going to crack:
 #		+ mass breaks unevenly along diameter
 #		+ figuring out where to put the boulders after is tricky
@@ -44,12 +40,12 @@
 #		+ mean
 #		+ stdev
 #		+ every year picks something in that distribution as the "amount eroded"
-#	- too small, turn into rubble pile
-#		+ if boulder size is < detection limit (maybe 0.25 m), remove from model
 #
 #long term
 #	- variables get optimized and solved for based on before/after sample data
-	
+
+from BasaltRock import *
+
 import subprocess
 import numpy as np
 import math as math
@@ -63,7 +59,7 @@ import csv
 
 NUMBER = 1000 # a thousand rocks
 TIME = 150000 # 150 thousand years 
-WINDOW_SIZE = 100000 # 100000 m x 100000 m
+WINDOW_SIZE = 10000 # 100000 m x 100000 m
 MAX_RADIUS = 10 # 10 m
 MIN_RADIUS = 0.25 # 0.25 m
 
@@ -72,80 +68,9 @@ TIPPING_POINT = 0.25 # quarter of the rock
 
 # boulder cracking variables
 CRACK_YEAR = 1000000 # a million years
-CRACK_STDEV = 0.001 # TODO: revisit
+CRACK_STDEV = 0.33 # TODO: revisit
 CRACK_X_MEAN = 0.5 # from 0-1 along diameter
 CRACK_X_STDEV = 0.1 # TODO: revisit
-
-# defines basalt rock data container
-# future plan is to make Rock generic, 
-# store density as an attribute,
-# define different weathering methods,
-# have different definitions of those weathering methods for each type of rock
-class BasaltRock: 
-	rocks = []
-	x = []
-	y = []
-	original_radii = []
-	new_radii = []
-
-	# constructs a new spherical basalt rock with the given diameter at
-	# the given location
-	#
-	# params:
-	#	x_pos -    number to represent x geographic position in grid
-	#	y_pos -    number to represent y geographic position in grid
-	#	diameter - number to represent diameter of boulder in meters
-	def __init__(self, x_pos, y_pos, diameter, height, generation):
-		self.x = x_pos
-		self.y = y_pos
-		self.radius = diameter / 2 
-		self.new_radius = diameter / 2
-		self.gen = generation
-		self.height = height
-		self.time = 0
-
-	def __repr__(self):
-		return repr((self.x, self.y, self.radius))
-
-	# reduces radius of rock by 0.04 x 10^-9 m / year (Golombek & Bridges, 2000) 
-	# (minimum listed) for years number of years; simulates aeolian weathering 
-	# process
-	#
-	# params:
-	# 	years - number of years to weather rock
-	def aeolian_weather(self, years):
-		self.new_radius = self.radius - years * 0.04 * 10**(-9)
-
-	def crack(self):
-		crack_spot = self.radius * 2 * np.random.normal(CRACK_X_MEAN, CRACK_X_STDEV)
-		# crack angle? for now assuming along longest axis (and projecting
-		# longest axis along x axis)
-		if crack_spot < self.radius * TIPPING_POINT:
-			# new rock is the one that tipped over
-			new_rock = BasaltRock(self.x - self.radius + crack_spot - (self.height / 2), self.y, TEMP_HEIGHT, crack_spot, self.gen + 1)
-			# new_rock.x is probably correct? want to double-check
-			self.x = self.x + (crack_spot / 2)
-			self.radius = self.radius - (crack_spot / 2)
-		elif crack_spot > self.radius * (1 - TIPPING_POINT):
-			# new_rock is the one that tipped over
-			new_rock = BasaltRock(self.x + self.radius - crack_spot + (self.height / 2), self.y, TEMP_HEIGHT, crack_spot, self.gen + 1)
-			self.x = self.x - self.radius + (crack_spot / 2)
-			self.radius = self.radius - (crack_spot / 2)
-		else:
-			new_rock = BasaltRock(self.x + (crack_spot / 2), self.y, self.radius * 2 - crack_spot, TEMP_HEIGHT, self.gen + 1)
-			self.x = self.x - self.radius + (crack_spot / 2)
-			self.radius = crack_spot / 2
-		self.time = 0
-		return new_rock
-
-
-	def is_overlapping(new_rock):
-		for rock in BasaltRock.rocks:
-			# basic circle overlap comparison
-			r = math.pow(math.pow(new_rock.x - rock.x, 2) + math.pow(new_rock.y - rock.y, 2), 0.5)
-			if r - new_rock.radius - rock.radius < 0 is True:
-				return True
-		return False
 
 # arrays to help with graphing
 file_rocks = []
@@ -195,7 +120,7 @@ for year in range(TIME):
 			new_rock = rock.crack();
 			if rock.radius < MIN_RADIUS:
 				file_rocks.remove(rock)
-			else:
+			elif new_rock.radius >= MIN_RADIUS:
 				file_rocks.append(new_rock)
 				file_radii.append(new_rock.radius)
 				file_lat.append(new_rock.x)
@@ -251,7 +176,7 @@ for rock in sorted_rocks:
 
 # plotting CFA of randomly generated boulders
 plt.plot(cfa_x, cfa_y, 'o')
-plt.title('cumulative fractional area (cfa)')
+plt.title('cumulative fractional area (cfa) from randomly generated data')
 plt.xlabel('diameter of boulder (m)')
 plt.ylabel('cumulative fractional area (m^2 / m^2)')
 plt.show()
@@ -279,7 +204,13 @@ for rock in file_sorted_rocks:
 
 # plotting position of file boulders
 plt.plot(file_cfa_x, file_cfa_y, 'o')
-plt.title('cumulative fractional area (cfa)')
+plt.title('cumulative fractional area (cfa) from file data')
 plt.xlabel('diameter of boulder (m)')
 plt.ylabel('cumulative fractional area (m^2 / m^2)')
+plt.show()
+
+plt.plot(file_lat, file_lon, 'o')
+plt.title('file rock positions')
+plt.xlabel('latitude')
+plt.ylabel('longitude')
 plt.show()
