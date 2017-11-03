@@ -43,7 +43,10 @@ class BasaltRock:
 		self.time = 0
 
 	def __repr__(self):
-		return repr((self.x, self.y, self.radius))
+		return repr(self.x, self.y, self.radius)
+
+	def toString(self):
+		return str(self.x) + str(self.y) + str(self.radius)
 
 	# reduces radius of rock by 0.04 x 10^-9 m / year (Golombek & Bridges, 2000) 
 	# (minimum listed) for years number of years; simulates aeolian weathering 
